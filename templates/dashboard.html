@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Dashboard – Escalation Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Plus Jakarta Sans','Inter',sans-serif;
+      background:#f8fafc;
+      color:#1e293b;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+    }
+
+    /* NAVBAR */
+    nav{
+      background:#ffffff;
+      border-bottom:1px solid #e2e8f0;
+      padding:14px 28px;
+      display:flex;
+      align-items:center;
+      gap:16px;
+      position:sticky;
+      top:0;
+      z-index:100;
+      box-shadow:0 1px 3px rgba(0,0,0,0.03);
+      flex-wrap:wrap;
+    }
+    nav .brand{
+      font-weight:800;
+      color:#0f172a;
+      font-size:1.15rem;
+      margin-right:auto;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      text-decoration:none;
+    }
+    nav .brand span.icon{font-size:1.25rem;}
+    nav .brand span.highlight{color:#2563eb;}
+    nav a.nav-link{
+      color:#64748b;
+      text-decoration:none;
+      font-size:.88rem;
+      font-weight:600;
+      padding:7px 14px;
+      border-radius:8px;
+      transition:all .15s ease;
+    }
+    nav a.nav-link:hover{background:#f1f5f9;color:#0f172a;}
+    nav a.nav-link.active{background:#eff6ff;color:#2563eb;font-weight:700;}
+
+    nav .live-badge{
+      font-size:.75rem;
+      font-weight:700;
+      color:#059669;
+      background:#ecfdf5;
+      border:1px solid #a7f3d0;
+      border-radius:9999px;
+      padding:4px 12px;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+    }
+    .live-dot{
+      width:7px;
+      height:7px;
+      border-radius:50%;
+      background:#10b981;
+      display:inline-block;
+      animation:pulse 2s infinite;
+    }
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.85)}}
+
+    /* LAYOUT */
+    .container{
+      max-width:1440px;
+      width:100%;
+      margin:0 auto;
+      padding:28px 24px 60px;
+    }
+
+    /* STATS ROW */
+    .stats-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));
+      gap:16px;
+      margin-bottom:28px;
+    }
+    .stat-card{
+      background:#ffffff;
+      border:1px solid #e2e8f0;
+      border-radius:16px;
+      padding:18px 16px;
+      box-shadow:0 2px 6px rgba(15,23,42,0.03);
+      transition:transform .15s ease, box-shadow .15s ease;
+      display:flex;
+      flex-direction:column;
+      align-items:flex-start;
+    }
+    .stat-card:hover{
+      transform:translateY(-2px);
+      box-shadow:0 6px 14px rgba(15,23,42,0.06);
+    }
+    .stat-card .lbl{
+      font-size:.74rem;
+      font-weight:700;
+      color:#64748b;
+      text-transform:uppercase;
+      letter-spacing:.6px;
+      margin-bottom:6px;
+    }
+    .stat-card .num{
+      font-size:1.85rem;
+      font-weight:800;
+      line-height:1;
+      color:#0f172a;
+    }
+    .stat-card.c-total{border-left:4px solid #64748b;}
+    .stat-card.c-open{border-left:4px solid #f59e0b;}
+    .stat-card.c-open .num{color:#d97706;}
+    .stat-card.c-inprog{border-left:4px solid #2563eb;}
+    .stat-card.c-inprog .num{color:#2563eb;}
+    .stat-card.c-pend{border-left:4px solid #8b5cf6;}
+    .stat-card.c-pend .num{color:#7c3aed;}
+    .stat-card.c-res{border-left:4px solid #10b981;}
+    .stat-card.c-res .num{color:#059669;}
+    .stat-card.c-closed{border-left:4px solid #94a3b8;}
+    .stat-card.c-closed .num{color:#64748b;}
+
+    /* FILTERS & SEARCH */
+    .filter-card{
+      background:#ffffff;
+      border:1px solid #e2e8f0;
+      border-radius:16px;
+      padding:18px 20px;
+      margin-bottom:20px;
+      box-shadow:0 2px 6px rgba(15,23,42,0.03);
+      display:flex;
+      gap:14px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .search-input-wrap{
+      flex:1;
+      min-width:240px;
+      position:relative;
+    }
+    .search-input-wrap input{
+      width:100%;
+      background:#f8fafc;
+      border:1.5px solid #cbd5e1;
+      color:#0f172a;
+      border-radius:10px;
+      padding:9px 14px 9px 38px;
+      font-size:.88rem;
+      outline:none;
+      transition:all .15s ease;
+    }
+    .search-input-wrap input:focus{
+      background:#ffffff;
+      border-color:#2563eb;
+      box-shadow:0 0 0 3px rgba(37,99,235,0.12);
+    }
+    .search-icon{
+      position:absolute;
+      left:12px;
+      top:50%;
+      transform:translateY(-50%);
+      color:#94a3b8;
+      font-size:.9rem;
+      pointer-events:none;
+    }
+
+    .filter-select{
+      background:#ffffff;
+      border:1.5px solid #cbd5e1;
+      color:#334155;
+      border-radius:10px;
+      padding:9px 14px;
+      font-size:.86rem;
+      font-weight:600;
+      outline:none;
+      cursor:pointer;
+      transition:all .15s ease;
+    }
+    .filter-select:focus{
+      border-color:#2563eb;
+      box-shadow:0 0 0 3px rgba(37,99,235,0.12);
+    }
+
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      border-radius:10px;
+      padding:9px 18px;
+      font-size:.86rem;
+      font-weight:700;
+      text-decoration:none;
+      cursor:pointer;
+      transition:all .15s ease;
+      border:none;
+      white-space:nowrap;
+    }
+    .btn-primary{
+      background:#2563eb;
+      color:#ffffff;
+      box-shadow:0 2px 8px rgba(37,99,235,0.25);
+    }
+    .btn-primary:hover{
+      background:#1d4ed8;
+      box-shadow:0 4px 12px rgba(37,99,235,0.35);
+    }
+    .btn-outline{
+      background:#ffffff;
+      border:1.5px solid #cbd5e1;
+      color:#334155;
+    }
+    .btn-outline:hover{
+      background:#f8fafc;
+      border-color:#94a3b8;
+      color:#0f172a;
+    }
+
+    .refresh-status-bar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:12px;
+      padding:0 4px;
+      font-size:.78rem;
+      color:#64748b;
+    }
+
+    /* TABLE */
+    .table-container{
+      background:#ffffff;
+      border:1px solid #e2e8f0;
+      border-radius:16px;
+      overflow:hidden;
+      box-shadow:0 4px 12px rgba(15,23,42,0.03);
+    }
+    .table-responsive{
+      width:100%;
+      overflow-x:auto;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:.86rem;
+      text-align:left;
+    }
+    thead{
+      background:#f8fafc;
+      border-bottom:1.5px solid #e2e8f0;
+    }
+    th{
+      padding:14px 16px;
+      font-weight:700;
+      color:#475569;
+      font-size:.75rem;
+      text-transform:uppercase;
+      letter-spacing:.6px;
+      white-space:nowrap;
+    }
+    tbody tr{
+      border-bottom:1px solid #f1f5f9;
+      transition:background .15s ease;
+    }
+    tbody tr:last-child{border-bottom:none;}
+    tbody tr:hover{background:#f8fafc;}
+    td{
+      padding:14px 16px;
+      color:#1e293b;
+      vertical-align:middle;
+    }
+
+    /* BADGES */
+    .ticket-badge{
+      color:#2563eb;
+      font-weight:700;
+      text-decoration:none;
+      background:#eff6ff;
+      border:1px solid #bfdbfe;
+      padding:4px 10px;
+      border-radius:6px;
+      display:inline-block;
+      font-size:.82rem;
+      transition:all .15s ease;
+    }
+    .ticket-badge:hover{
+      background:#2563eb;
+      color:#ffffff;
+      border-color:#2563eb;
+    }
+
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      border-radius:9999px;
+      padding:3px 10px;
+      font-size:.74rem;
+      font-weight:700;
+      white-space:nowrap;
+    }
+    .b-open{background:#fef3c7;color:#b45309;border:1px solid #fde68a;}
+    .b-inprog{background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe;}
+    .b-pending{background:#ede9fe;color:#6d28d9;border:1px solid #ddd6fe;}
+    .b-resolved{background:#d1fae5;color:#047857;border:1px solid #a7f3d0;}
+    .b-closed{background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;}
+
+    .platform-pill{
+      display:inline-flex;
+      align-items:center;
+      gap:5px;
+      font-weight:600;
+      font-size:.82rem;
+      color:#334155;
+    }
+
+    .cell-complaint{
+      max-width:220px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .cell-courier{
+      max-width:160px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+      font-size:.8rem;
+      color:#64748b;
+    }
+
+    .btn-update-action{
+      background:#eff6ff;
+      color:#2563eb;
+      border:1px solid #bfdbfe;
+      padding:5px 12px;
+      border-radius:8px;
+      font-size:.78rem;
+      font-weight:700;
+      cursor:pointer;
+      transition:all .15s ease;
+    }
+    .btn-update-action:hover{
+      background:#2563eb;
+      color:#ffffff;
+      border-color:#2563eb;
+    }
+
+    .empty-state{
+      text-align:center;
+      padding:60px 20px;
+      color:#94a3b8;
+    }
+    .empty-icon{font-size:3rem;margin-bottom:12px;}
+
+    /* MODAL */
+    .modal-overlay{
+      display:none;
+      position:fixed;
+      top:0;left:0;width:100%;height:100%;
+      background:rgba(15,23,42,0.45);
+      backdrop-filter:blur(3px);
+      z-index:999;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+    }
+    .modal-box{
+      background:#ffffff;
+      border:1px solid #e2e8f0;
+      border-radius:20px;
+      padding:28px;
+      max-width:520px;
+      width:100%;
+      box-shadow:0 20px 45px -10px rgba(15,23,42,0.18);
+      animation:modalFade .2s ease;
+    }
+    @keyframes modalFade{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+
+    .modal-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:20px;
+      padding-bottom:12px;
+      border-bottom:1.5px solid #f1f5f9;
+    }
+    .modal-title{
+      font-size:1.15rem;
+      font-weight:800;
+      color:#0f172a;
+    }
+    .btn-close-modal{
+      background:none;
+      border:none;
+      font-size:1.3rem;
+      color:#94a3b8;
+      cursor:pointer;
+      padding:4px;
+    }
+    .btn-close-modal:hover{color:#0f172a;}
+  </style>
+</head>
+<body>
+<nav>
+  <a href="/dashboard" class="brand">
+    <span class="icon">🚨</span>
+    <span>Escalation <span class="highlight">Portal</span></span>
+  </a>
+  <a href="/" class="nav-link">Home</a>
+  <a href="/dashboard" class="nav-link active">Dashboard</a>
+  <a href="/new" class="nav-link">+ New Escalation</a>
+  <span class="live-badge"><span class="live-dot"></span> LIVE WIFI SYNC</span>
+</nav>
+
+<div class="container">
+  <!-- STATS -->
+  <div class="stats-grid">
+    <div class="stat-card c-total"><div class="lbl">Total Complaints</div><div class="num" id="sTotal">–</div></div>
+    <div class="stat-card c-open"><div class="lbl">Open</div><div class="num" id="sOpen">–</div></div>
+    <div class="stat-card c-inprog"><div class="lbl">In Progress</div><div class="num" id="sInprog">–</div></div>
+    <div class="stat-card c-pend"><div class="lbl">Pending</div><div class="num" id="sPend">–</div></div>
+    <div class="stat-card c-res"><div class="lbl">Resolved</div><div class="num" id="sRes">–</div></div>
+    <div class="stat-card c-closed"><div class="lbl">Closed</div><div class="num" id="sClosed">–</div></div>
+  </div>
+
+  <!-- FILTERS & SEARCH -->
+  <div class="filter-card">
+    <div class="search-input-wrap">
+      <span class="search-icon">🔍</span>
+      <input id="searchBox" type="text" placeholder="Search ticket #, customer name, contact, complaint, or courier tracking..."/>
+    </div>
+
+    <select id="fStatus" class="filter-select">
+      <option value="">All Statuses</option>
+      <option value="Open">Open</option>
+      <option value="In Progress">In Progress</option>
+      <option value="Pending">Pending</option>
+      <option value="Resolved">Resolved</option>
+      <option value="Closed">Closed</option>
+    </select>
+
+    <select id="fPlatform" class="filter-select">
+      <option value="">All Channels</option>
+      <option value="Whatsapp">💬 Whatsapp</option>
+      <option value="Facebook">📘 Facebook</option>
+      <option value="Instagram">📸 Instagram</option>
+      <option value="Linkedin">💼 Linkedin</option>
+      <option value="Email">✉️ Email</option>
+      <option value="Call">📞 Call</option>
+    </select>
+
+    <a href="/new" class="btn btn-primary">➕ New Escalation</a>
+  </div>
+
+  <!-- REFRESH STATUS BAR -->
+  <div class="refresh-status-bar">
+    <span>Showing live complaint records · Auto-refreshes every 30 seconds</span>
+    <span>Last updated: <strong id="lastRefresh">–</strong></span>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-container">
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Ticket #</th>
+            <th>Platform</th>
+            <th>Customer</th>
+            <th>Contact</th>
+            <th>Complaint Detail</th>
+            <th>Courier Detail</th>
+            <th>Reported By</th>
+            <th>Assign To</th>
+            <th>Escalation Date</th>
+            <th>Status</th>
+            <th>Resolution ETA</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="escTable">
+          <tr><td colspan="12" class="empty-state"><div class="empty-icon">⏳</div><p>Loading escalations...</p></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- QUICK UPDATE MODAL -->
+<div id="quickModal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modalTicketTitle">⚡ Quick Update</h3>
+      <button class="btn-close-modal" onclick="closeQuickModal()">&times;</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+      <div>
+        <label style="font-size:.78rem;font-weight:700;color:#334155;display:block;margin-bottom:6px;">Current Status</label>
+        <select id="mStatus" class="filter-select" style="width:100%;">
+          <option value="Open">Open</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Pending">Pending</option>
+          <option value="Resolved">Resolved</option>
+          <option value="Closed">Closed</option>
+        </select>
+      </div>
+
+      <div>
+        <label style="font-size:.78rem;font-weight:700;color:#334155;display:block;margin-bottom:6px;">ETA for Resolution</label>
+        <input id="mEta" type="date" class="filter-select" style="width:100%;"/>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+      <div>
+        <label style="font-size:.78rem;font-weight:700;color:#334155;display:block;margin-bottom:6px;">Assign To</label>
+        <select id="mAssign" class="filter-select" style="width:100%;">
+          <option value="Ajay">Ajay</option>
+          <option value="Anupam">Anupam</option>
+          <option value="Monika">Monika</option>
+        </select>
+      </div>
+
+      <div>
+        <label style="font-size:.78rem;font-weight:700;color:#334155;display:block;margin-bottom:6px;">Updated By <span style="color:#ef4444;">*</span></label>
+        <select id="mBy" class="filter-select" style="width:100%;">
+          <option value="">— Select Name —</option>
+          <option value="Vipin">Vipin</option>
+          <option value="Chandani">Chandani</option>
+          <option value="Ajay">Ajay</option>
+          <option value="Anupam">Anupam</option>
+          <option value="Monika">Monika</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-bottom:14px;">
+      <label style="font-size:.78rem;font-weight:700;color:#334155;display:block;margin-bottom:6px;">Courier Detail</label>
+      <input id="mCourier" type="text" placeholder="AWB/Docket #, Courier partner, dispatch status..." class="filter-select" style="width:100%;"/>
+    </div>
+
+    <div style="margin-bottom:20px;">
+      <label style="font-size:.78rem;font-weight:700;color:#334155;display:block;margin-bottom:6px;">Remark / Update Note</label>
+      <input id="mRemark" type="text" placeholder="e.g. Field team contacted customer, replacement dispatched..." class="filter-select" style="width:100%;"/>
+    </div>
+
+    <div style="display:flex;gap:12px;justify-content:flex-end;">
+      <button class="btn btn-outline" onclick="closeQuickModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitQuickModal()">💾 Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PLATFORM_ICONS = {
+  'Facebook':'📘',
+  'Linkedin':'💼',
+  'Email':'✉️',
+  'Whatsapp':'💬',
+  'Call':'📞',
+  'Instagram':'📸',
+  'Twitter / X':'🐦',
+  'YouTube':'▶️',
+  'Other':'🌐'
+};
+
+function statusBadge(s){
+  const map = {
+    'Open':'b-open',
+    'In Progress':'b-inprog',
+    'Pending':'b-pending',
+    'Resolved':'b-resolved',
+    'Closed':'b-closed'
+  };
+  return `<span class="badge ${map[s] || 'b-open'}">${s || 'Open'}</span>`;
+}
+
+async function loadStats(){
+  try{
+    const r = await fetch('/api/stats');
+    const d = await r.json();
+    document.getElementById('sTotal').textContent  = d.total || 0;
+    document.getElementById('sOpen').textContent   = d.open || 0;
+    document.getElementById('sInprog').textContent = d.in_progress || 0;
+    document.getElementById('sPend').textContent   = d.pending || 0;
+    document.getElementById('sRes').textContent    = d.resolved || 0;
+    document.getElementById('sClosed').textContent = d.closed || 0;
+  }catch(e){
+    console.error('Stats load error', e);
+  }
+}
+
+async function loadTable(){
+  const search   = document.getElementById('searchBox').value.trim();
+  const status   = document.getElementById('fStatus').value;
+  const platform = document.getElementById('fPlatform').value;
+
+  const params = new URLSearchParams();
+  if(search)   params.set('search', search);
+  if(status)   params.set('status', status);
+  if(platform) params.set('platform', platform);
+
+  try{
+    const r = await fetch('/api/escalations?' + params.toString());
+    const data = await r.json();
+    const tbody = document.getElementById('escTable');
+
+    if(!data.length){
+      tbody.innerHTML = `<tr><td colspan="12" class="empty-state"><div class="empty-icon">📭</div><p>No escalations found matching filters.</p></td></tr>`;
+      return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+
+    tbody.innerHTML = data.map(e => {
+      let etaHtml = '—';
+      if(e.eta){
+        const isOverdue = e.eta < today && e.status !== 'Resolved' && e.status !== 'Closed';
+        etaHtml = isOverdue 
+          ? `<span style="color:#ef4444;font-weight:700;">${e.eta} <span title="Overdue ETA">⚠️</span></span>`
+          : `<span style="color:#059669;font-weight:600;">${e.eta}</span>`;
+      }
+
+      const safeTicket  = (e.ticket_no || '').replace(/'/g, "\\'");
+      const safeCourier = (e.courier_detail || '').replace(/'/g, "\\'");
+      const safeStatus  = (e.status || 'Open').replace(/'/g, "\\'");
+      const safeEta     = (e.eta || '').replace(/'/g, "\\'");
+      const safeAssign  = (e.assigned_to || '').replace(/'/g, "\\'");
+
+      return `
+      <tr>
+        <td><a class="ticket-badge" href="/detail/${e.id}">${e.ticket_no}</a></td>
+        <td><span class="platform-pill">${PLATFORM_ICONS[e.platform]||'💬'} ${e.platform}</span></td>
+        <td style="font-weight:600;">${e.customer_name || '—'}</td>
+        <td style="font-size:.82rem;color:#475569;">${e.customer_contact || '—'}</td>
+        <td class="cell-complaint" title="${(e.complaint||'').replace(/"/g,'&quot;')}">${e.complaint || '—'}</td>
+        <td class="cell-courier" title="${(e.courier_detail||'').replace(/"/g,'&quot;')}">${e.courier_detail || '—'}</td>
+        <td style="font-weight:600;font-size:.82rem;">${e.reported_by || '—'}</td>
+        <td style="font-weight:600;font-size:.82rem;color:#2563eb;">${e.assigned_to || '—'}</td>
+        <td style="font-size:.8rem;color:#64748b;">${e.escalation_date || '—'}</td>
+        <td>${statusBadge(e.status)}</td>
+        <td style="font-size:.82rem;">${etaHtml}</td>
+        <td>
+          <button class="btn-update-action" onclick="openQuickModal(${e.id}, '${safeTicket}', '${safeStatus}', '${safeEta}', '${safeAssign}', '${safeCourier}')">
+            ⚡ Update
+          </button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    document.getElementById('lastRefresh').textContent = new Date().toLocaleTimeString();
+  }catch(e){
+    console.error('Table load error', e);
+  }
+}
+
+let activeModalId = null;
+
+function openQuickModal(id, ticketNo, status, eta, assign, courier){
+  activeModalId = id;
+  document.getElementById('modalTicketTitle').textContent = `⚡ Update ${ticketNo}`;
+  document.getElementById('mStatus').value  = status || 'Open';
+  document.getElementById('mEta').value     = eta || '';
+  if(assign) document.getElementById('mAssign').value = assign;
+  document.getElementById('mCourier').value = courier || '';
+  document.getElementById('mBy').value      = '';
+  document.getElementById('mRemark').value  = '';
+  document.getElementById('quickModal').style.display = 'flex';
+}
+
+function closeQuickModal(){
+  document.getElementById('quickModal').style.display = 'none';
+  activeModalId = null;
+}
+
+async function submitQuickModal(){
+  if(!activeModalId) return;
+  const by = document.getElementById('mBy').value;
+  if(!by){
+    alert('Please select your name under "Updated By".');
+    document.getElementById('mBy').focus();
+    return;
+  }
+  const status   = document.getElementById('mStatus').value;
+  const eta      = document.getElementById('mEta').value;
+  const assign   = document.getElementById('mAssign').value;
+  const courier  = document.getElementById('mCourier').value.trim();
+  const remark   = document.getElementById('mRemark').value.trim();
+
+  const note = remark || `Status changed to ${status}${eta ? ', ETA: ' + eta : ''}${courier ? ', Courier: ' + courier : ''}`;
+
+  const payload = {
+    status: status,
+    eta: eta,
+    assigned_to: assign,
+    courier_detail: courier,
+    updated_by: by,
+    note: note
+  };
+
+  try{
+    const r = await fetch(`/api/escalations/${activeModalId}/update`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if(d.success){
+      closeQuickModal();
+      refresh();
+    } else {
+      alert(d.error || 'Failed to update escalation.');
+    }
+  }catch(e){
+    alert('Network error while saving update.');
+  }
+}
+
+async function refresh(){
+  await Promise.all([loadStats(), loadTable()]);
+}
+
+['searchBox','fStatus','fPlatform'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', loadTable);
+});
+
+// Close modal on Escape key or outside click
+window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeQuickModal(); });
+document.getElementById('quickModal').addEventListener('click', (e)=>{
+  if(e.target === document.getElementById('quickModal')) closeQuickModal();
+});
+
+refresh();
+setInterval(refresh, 30000);
+</script>
+</body>
+</html>
