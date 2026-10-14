@@ -32,9 +32,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-with app.app_context():
-    db.create_all()
-
 # ─────────────────────────── MODELS ───────────────────────────
 
 class Escalation(db.Model):
@@ -98,11 +95,90 @@ class EscalationUpdate(db.Model):
         }
 
 
+# ─────────────────────────── INITIALIZE DATABASE ───────────────────────────
+
+def init_db():
+    with app.app_context():
+        db.create_all()
+        # Auto-migration for SQLite or PostgreSQL if columns are missing
+        try:
+            engine = db.engine
+            with engine.connect() as conn:
+                if 'sqlite' in str(engine.url):
+                    cols = [row[1] for row in conn.execute(db.text("PRAGMA table_info(escalations)")).fetchall()]
+                    if cols:
+                        if 'courier_detail' not in cols:
+                            conn.execute(db.text("ALTER TABLE escalations ADD COLUMN courier_detail TEXT"))
+                        if 'escalation_date' not in cols:
+                            conn.execute(db.text("ALTER TABLE escalations ADD COLUMN escalation_date VARCHAR(30)"))
+                        conn.commit()
+                elif 'postgresql' in str(engine.url):
+                    conn.execute(db.text("ALTER TABLE escalations ADD COLUMN IF NOT EXISTS courier_detail TEXT"))
+                    conn.execute(db.text("ALTER TABLE escalations ADD COLUMN IF NOT EXISTS escalation_date VARCHAR(30)"))
+                    conn.commit()
+        except Exception as e:
+            print(f"Migration notice: {e}")
+
+        # Seed sample escalations if empty so dashboard is active immediately
+        try:
+            if Escalation.query.count() == 0:
+                sample_items = [
+                    Escalation(
+                        ticket_no="ESC-2024-001",
+                        customer_contact="+91 98765 43210",
+                        customer_name="Rahul Sharma",
+                        platform="Whatsapp",
+                        escalation_date=datetime.utcnow().strftime('%Y-%m-%d'),
+                        reported_by="Vipin",
+                        assigned_to="Ajay",
+                        complaint="Smart TV display panel flickering intermittently. Customer requesting urgent technician visit.",
+                        courier_detail="Bluedart AWB #BLU-882910 - Replacement board in transit",
+                        priority="High",
+                        status="In Progress",
+                        eta=datetime.utcnow().strftime('%Y-%m-%d')
+                    ),
+                    Escalation(
+                        ticket_no="ESC-2024-002",
+                        customer_contact="+91 91234 56789",
+                        customer_name="Pooja Verma",
+                        platform="Instagram",
+                        escalation_date=datetime.utcnow().strftime('%Y-%m-%d'),
+                        reported_by="Chandani",
+                        assigned_to="Anupam",
+                        complaint="Sound bar power cable missing in delivery parcel. Customer escalation on social handle.",
+                        courier_detail="Delhivery Tracking #DL-993821 - Dispatched adapter",
+                        priority="Medium",
+                        status="Open",
+                        eta=datetime.utcnow().strftime('%Y-%m-%d')
+                    ),
+                    Escalation(
+                        ticket_no="ESC-2024-003",
+                        customer_contact="+91 99887 76655",
+                        customer_name="Vikram Mehta",
+                        platform="Facebook",
+                        escalation_date=datetime.utcnow().strftime('%Y-%m-%d'),
+                        reported_by="Vipin",
+                        assigned_to="Monika",
+                        complaint="Delayed installation service post-delivery. Customer requested morning time slot.",
+                        courier_detail="Product delivered on 12-Oct by DTDC",
+                        priority="Critical",
+                        status="Pending",
+                        eta=datetime.utcnow().strftime('%Y-%m-%d')
+                    )
+                ]
+                db.session.add_all(sample_items)
+                db.session.commit()
+        except Exception as e:
+            print(f"Seed notice: {e}")
+
+init_db()
+
+
 # ─────────────────────────── ROUTES ───────────────────────────
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('dashboard.html')
 
 
 @app.route('/dashboard')
