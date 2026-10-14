@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Escalation Details – Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Plus Jakarta Sans','Inter',sans-serif;
+      background:#f8fafc;
+      color:#1e293b;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+    }
+    /* NAVBAR */
+    nav{
+      background:#ffffff;
+      border-bottom:1px solid #e2e8f0;
+      padding:14px 28px;
+      display:flex;
+      align-items:center;
+      gap:16px;
+      position:sticky;
+      top:0;
+      z-index:100;
+      box-shadow:0 1px 3px rgba(0,0,0,0.03);
+    }
+    nav .brand{
+      font-weight:800;
+      color:#0f172a;
+      font-size:1.15rem;
+      margin-right:auto;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      text-decoration:none;
+    }
+    nav .brand span.icon{font-size:1.25rem;}
+    nav .brand span.highlight{color:#2563eb;}
+    nav a.nav-link{
+      color:#64748b;
+      text-decoration:none;
+      font-size:.88rem;
+      font-weight:600;
+      padding:7px 14px;
+      border-radius:8px;
+      transition:all .15s ease;
+    }
+    nav a.nav-link:hover{background:#f1f5f9;color:#0f172a;}
+
+    /* CONTAINER */
+    .container{
+      max-width:980px;
+      width:100%;
+      margin:32px auto;
+      padding:0 20px 60px;
+    }
+
+    /* HEADER */
+    .esc-header{
+      display:flex;
+      align-items:flex-start;
+      gap:16px;
+      margin-bottom:24px;
+      flex-wrap:wrap;
+      justify-content:space-between;
+    }
+    .header-left{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .ticket-title-row{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .ticket-badge-lg{
+      font-size:1.45rem;
+      font-weight:800;
+      color:#2563eb;
+      letter-spacing:-0.02em;
+    }
+    .esc-meta{
+      color:#64748b;
+      font-size:.84rem;
+    }
+    .header-actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    /* BUTTONS */
+    .btn{
+      padding:8px 16px;
+      border-radius:10px;
+      font-weight:700;
+      font-size:.84rem;
+      cursor:pointer;
+      border:none;
+      transition:all .15s ease;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      text-decoration:none;
+    }
+    .btn-primary{background:#2563eb;color:#ffffff;}
+    .btn-primary:hover{background:#1d4ed8;}
+    .btn-outline{background:#ffffff;color:#475569;border:1.5px solid #cbd5e1;}
+    .btn-outline:hover{background:#f8fafc;color:#0f172a;border-color:#94a3b8;}
+    .btn-danger{background:#fef2f2;color:#dc2626;border:1.5px solid #fecaca;}
+    .btn-danger:hover{background:#dc2626;color:#ffffff;}
+
+    /* STATUS BADGES */
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      border-radius:9999px;
+      padding:4px 12px;
+      font-size:.76rem;
+      font-weight:700;
+      white-space:nowrap;
+    }
+    .b-open{background:#fef3c7;color:#b45309;border:1px solid #fde68a;}
+    .b-inprog{background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe;}
+    .b-pending{background:#ede9fe;color:#6d28d9;border:1px solid #ddd6fe;}
+    .b-resolved{background:#d1fae5;color:#047857;border:1px solid #a7f3d0;}
+    .b-closed{background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;}
+
+    /* CARDS */
+    .card{
+      background:#ffffff;
+      border:1px solid #e2e8f0;
+      border-radius:18px;
+      padding:24px 28px;
+      margin-bottom:24px;
+      box-shadow:0 4px 12px rgba(15,23,42,0.03);
+    }
+    .card-title{
+      font-size:.82rem;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.8px;
+      color:#2563eb;
+      margin-bottom:18px;
+      padding-bottom:10px;
+      border-bottom:1.5px solid #f1f5f9;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+
+    /* INFO GRID */
+    .info-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
+      gap:16px 20px;
+    }
+    .info-item label{
+      font-size:.74rem;
+      color:#64748b;
+      display:block;
+      margin-bottom:4px;
+      text-transform:uppercase;
+      letter-spacing:.5px;
+      font-weight:700;
+    }
+    .info-item span{
+      font-size:.95rem;
+      color:#0f172a;
+      font-weight:600;
+    }
+
+    /* TEXT BOXES */
+    .text-box{
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+      border-radius:12px;
+      padding:14px 18px;
+      font-size:.9rem;
+      line-height:1.6;
+      color:#334155;
+      white-space:pre-wrap;
+      margin-top:6px;
+    }
+    .courier-box{
+      background:#f0fdf4;
+      border:1.5px solid #bbf7d0;
+      color:#166534;
+      font-weight:600;
+    }
+
+    /* QUICK ACTIONS CARD */
+    .quick-actions-card{
+      background:#f0f7ff;
+      border:1.5px solid #bfdbfe;
+    }
+    .quick-actions-card .card-title{
+      color:#1d4ed8;
+      border-bottom-color:#dbeafe;
+    }
+
+    /* TIMELINE */
+    .timeline{
+      position:relative;
+      padding-left:26px;
+      margin-top:8px;
+    }
+    .timeline::before{
+      content:'';
+      position:absolute;
+      left:8px;
+      top:4px;
+      bottom:4px;
+      width:2px;
+      background:#e2e8f0;
+    }
+    .tl-item{
+      position:relative;
+      margin-bottom:22px;
+    }
+    .tl-item:last-child{margin-bottom:0;}
+    .tl-item::before{
+      content:'';
+      position:absolute;
+      left:-22px;
+      top:5px;
+      width:10px;
+      height:10px;
+      border-radius:50%;
+      background:#2563eb;
+      border:2.5px solid #ffffff;
+      box-shadow:0 0 0 2px #bfdbfe;
+    }
+    .tl-header{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-bottom:4px;
+    }
+    .tl-by{font-weight:700;font-size:.88rem;color:#0f172a;}
+    .tl-time{font-size:.76rem;color:#64748b;}
+    .tl-note{color:#475569;font-size:.88rem;line-height:1.5;}
+
+    /* INPUTS */
+    .field{margin-bottom:14px;}
+    .field label{
+      font-size:.78rem;
+      font-weight:700;
+      color:#334155;
+      display:block;
+      margin-bottom:5px;
+      letter-spacing:.2px;
+    }
+    input, select, textarea{
+      background:#ffffff;
+      border:1.5px solid #cbd5e1;
+      color:#0f172a;
+      border-radius:10px;
+      padding:9px 13px;
+      font-size:.88rem;
+      font-family:inherit;
+      outline:none;
+      transition:all .15s ease;
+      width:100%;
+    }
+    input:focus, select:focus, textarea:focus{
+      border-color:#2563eb;
+      box-shadow:0 0 0 3px rgba(37,99,235,0.12);
+    }
+    textarea{resize:vertical;min-height:80px;}
+
+    /* EDIT SECTION TOGGLE */
+    .edit-section{display:none;}
+    .edit-section.show{display:block;}
+
+    /* TOAST */
+    .toast{
+      position:fixed;
+      top:24px;
+      right:24px;
+      background:#059669;
+      color:#ffffff;
+      padding:14px 22px;
+      border-radius:12px;
+      font-weight:700;
+      font-size:.9rem;
+      display:none;
+      z-index:9999;
+      box-shadow:0 10px 25px rgba(5,150,105,0.3);
+    }
+  </style>
+</head>
+<body>
+<nav>
+  <a href="/dashboard" class="brand">
+    <span class="icon">🚨</span>
+    <span>Escalation <span class="highlight">Portal</span></span>
+  </a>
+  <a href="/" class="nav-link">Home</a>
+  <a href="/dashboard" class="nav-link">Dashboard</a>
+  <a href="/new" class="nav-link">+ New Escalation</a>
+</nav>
+
+<div class="container">
+  <!-- HEADER -->
+  <div class="esc-header">
+    <div class="header-left">
+      <div class="ticket-title-row">
+        <span class="ticket-badge-lg" id="ticketNo">Loading...</span>
+        <span id="headerPlatform"></span>
+        <span id="headerStatus"></span>
+      </div>
+      <div class="esc-meta" id="escMeta"></div>
+    </div>
+    <div class="header-actions">
+      <a href="/dashboard" class="btn btn-outline">⬅️ Dashboard</a>
+      <button class="btn btn-outline" onclick="toggleEdit()">✏️ Full Edit</button>
+      <button class="btn btn-danger" onclick="deleteEscalation()">🗑️ Delete</button>
+    </div>
+  </div>
+
+  <!-- ⚡ QUICK ACTIONS PANEL -->
+  <div class="card quick-actions-card">
+    <div class="card-title">⚡ Quick Action — Update Status, ETA &amp; Courier</div>
+    
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:14px;margin-bottom:14px;">
+      <div class="field" style="margin-bottom:0;">
+        <label>Current Status</label>
+        <select id="qa_status">
+          <option value="">— No change —</option>
+          <option value="Open">Open</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Pending">Pending</option>
+          <option value="Resolved">Resolved</option>
+          <option value="Closed">Closed</option>
+        </select>
+      </div>
+
+      <div class="field" style="margin-bottom:0;">
+        <label>ETA for Resolution</label>
+        <input id="qa_eta" type="date"/>
+      </div>
+
+      <div class="field" style="margin-bottom:0;">
+        <label>Assign To</label>
+        <select id="qa_assign">
+          <option value="">— No change —</option>
+          <option value="Ajay">Ajay</option>
+          <option value="Anupam">Anupam</option>
+          <option value="Monika">Monika</option>
+        </select>
+      </div>
+
+      <div class="field" style="margin-bottom:0;">
+        <label>Updated By <span style="color:#ef4444;">*</span></label>
+        <select id="qa_by">
+          <option value="">— Select your name —</option>
+          <option value="Vipin">Vipin</option>
+          <option value="Chandani">Chandani</option>
+          <option value="Ajay">Ajay</option>
+          <option value="Anupam">Anupam</option>
+          <option value="Monika">Monika</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+      <div class="field" style="margin-bottom:0;">
+        <label>Courier Detail</label>
+        <input id="qa_courier" placeholder="Update courier partner / AWB docket number..."/>
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label>Remark / Update Note</label>
+        <input id="qa_note" placeholder="What is the latest action taken?"/>
+      </div>
+    </div>
+
+    <div style="text-align:right;">
+      <button class="btn btn-primary" onclick="quickAction()">✅ Apply Update</button>
+    </div>
+  </div>
+
+  <!-- COMPLAINT DETAILS CARD -->
+  <div class="card">
+    <div class="card-title">📋 Escalation Information</div>
+    <div class="info-grid" id="detailGrid"></div>
+
+    <div style="margin-top:20px;">
+      <div class="info-item"><label>Complaint Detail</label></div>
+      <div class="text-box" id="complaintText"></div>
+    </div>
+
+    <div style="margin-top:20px;">
+      <div class="info-item"><label>📦 Courier Detail</label></div>
+      <div class="text-box courier-box" id="courierText">No courier details provided.</div>
+    </div>
+
+    <div style="margin-top:20px;" id="resolutionBlock" style="display:none;">
+      <div class="info-item"><label>✅ Resolution Notes</label></div>
+      <div class="text-box" id="resolutionText"></div>
+    </div>
+  </div>
+
+  <!-- FULL EDIT SECTION (COLLAPSIBLE) -->
+  <div class="card edit-section" id="editSection">
+    <div class="card-title">✏️ Edit All Escalation Fields</div>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div class="field">
+        <label>Platform / Channel</label>
+        <select id="e_platform">
+          <option value="Whatsapp">💬 Whatsapp</option>
+          <option value="Facebook">📘 Facebook</option>
+          <option value="Linkedin">💼 Linkedin</option>
+          <option value="Email">✉️ Email</option>
+          <option value="Call">📞 Call</option>
+          <option value="Instagram">📸 Instagram</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Date of Customer Escalation</label>
+        <input id="e_esc_date" type="date"/>
+      </div>
+
+      <div class="field">
+        <label>Customer Contact Number</label>
+        <input id="e_customer_contact" type="tel"/>
+      </div>
+
+      <div class="field">
+        <label>Customer Name</label>
+        <input id="e_customer_name"/>
+      </div>
+
+      <div class="field">
+        <label>Reported By</label>
+        <select id="e_reported_by">
+          <option value="Vipin">Vipin</option>
+          <option value="Chandani">Chandani</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Assign To</label>
+        <select id="e_assigned">
+          <option value="Ajay">Ajay</option>
+          <option value="Anupam">Anupam</option>
+          <option value="Monika">Monika</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Current Status</label>
+        <select id="e_status">
+          <option value="Open">Open</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Pending">Pending</option>
+          <option value="Resolved">Resolved</option>
+          <option value="Closed">Closed</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>ETA for Resolution</label>
+        <input id="e_eta" type="date"/>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Complaint Detail</label>
+      <textarea id="e_complaint"></textarea>
+    </div>
+
+    <div class="field">
+      <label>Courier Detail</label>
+      <input id="e_courier" placeholder="Courier partner, AWB docket number, dispatch status..."/>
+    </div>
+
+    <div class="field">
+      <label>Resolution Notes</label>
+      <textarea id="e_resolution" placeholder="Add resolution comments if resolved..."></textarea>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div class="field">
+        <label>Update Note (Summary of change)</label>
+        <input id="e_note" placeholder="e.g. Updated customer phone & courier tracking"/>
+      </div>
+      <div class="field">
+        <label>Updated By <span style="color:#ef4444;">*</span></label>
+        <select id="e_updatedby">
+          <option value="">— Select your name —</option>
+          <option value="Vipin">Vipin</option>
+          <option value="Chandani">Chandani</option>
+          <option value="Ajay">Ajay</option>
+          <option value="Anupam">Anupam</option>
+          <option value="Monika">Monika</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn btn-outline" onclick="toggleEdit()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEdit()">💾 Save All Changes</button>
+    </div>
+  </div>
+
+  <!-- TIMELINE -->
+  <div class="card">
+    <div class="card-title">📜 Action &amp; Activity Timeline</div>
+    <div class="timeline" id="timeline"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const ESC_ID = {{ esc_id }};
+let escData = null;
+
+const STATUS_CLASS = {
+  'Open':'b-open',
+  'In Progress':'b-inprog',
+  'Pending':'b-pending',
+  'Resolved':'b-resolved',
+  'Closed':'b-closed'
+};
+
+const PLATFORM_ICONS = {
+  'Facebook':'📘',
+  'Linkedin':'💼',
+  'Email':'✉️',
+  'Whatsapp':'💬',
+  'Call':'📞',
+  'Instagram':'📸',
+  'Twitter / X':'🐦',
+  'YouTube':'▶️',
+  'Other':'🌐'
+};
+
+function badge(cls, txt){
+  return `<span class="badge ${cls}">${txt}</span>`;
+}
+
+function showToast(msg, bg='#059669'){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = bg;
+  t.style.display = 'block';
+  setTimeout(()=> t.style.display = 'none', 2600);
+}
+
+async function loadEscalation(){
+  try{
+    const r = await fetch(`/api/escalations/${ESC_ID}`);
+    escData = await r.json();
+    render();
+  }catch(e){
+    console.error('Failed to load escalation', e);
+  }
+}
+
+function render(){
+  const e = escData;
+  document.title = `${e.ticket_no} – Escalation Portal`;
+  document.getElementById('ticketNo').textContent = e.ticket_no;
+  document.getElementById('escMeta').textContent = `Reported: ${e.escalation_date || e.created_at} · Field Agent: ${e.reported_by || '—'}`;
+  
+  document.getElementById('headerPlatform').innerHTML = 
+    `<span style="font-size:.9rem;font-weight:700;color:#334155;">${PLATFORM_ICONS[e.platform]||'💬'} ${e.platform}</span>`;
+  document.getElementById('headerStatus').innerHTML = 
+    badge(STATUS_CLASS[e.status]||'b-open', e.status);
+
+  document.getElementById('detailGrid').innerHTML = `
+    <div class="info-item"><label>Customer Name</label><span>${e.customer_name || '—'}</span></div>
+    <div class="info-item"><label>Contact Number</label><span>${e.customer_contact || '—'}</span></div>
+    <div class="info-item"><label>Platform / Channel</label><span>${PLATFORM_ICONS[e.platform]||''} ${e.platform}</span></div>
+    <div class="info-item"><label>Date of Escalation</label><span>${e.escalation_date || '—'}</span></div>
+    <div class="info-item"><label>Reported By</label><span>${e.reported_by || '—'}</span></div>
+    <div class="info-item"><label>Assigned To</label><span style="color:#2563eb;font-weight:700;">${e.assigned_to || 'Unassigned'}</span></div>
+    <div class="info-item"><label>Current Status</label><span>${badge(STATUS_CLASS[e.status]||'b-open', e.status)}</span></div>
+    <div class="info-item"><label>Resolution ETA</label><span style="color:${e.eta ? '#059669':'#64748b'};font-weight:700;">${e.eta || 'Not Set'}</span></div>
+  `;
+
+  document.getElementById('complaintText').textContent = e.complaint || '—';
+  
+  const courierElem = document.getElementById('courierText');
+  if(e.courier_detail && e.courier_detail.trim()){
+    courierElem.textContent = e.courier_detail;
+    courierElem.style.display = 'block';
+  } else {
+    courierElem.textContent = 'No courier details recorded yet.';
+  }
+
+  const resBlock = document.getElementById('resolutionBlock');
+  if(e.resolution && e.resolution.trim()){
+    resBlock.style.display = 'block';
+    document.getElementById('resolutionText').textContent = e.resolution;
+  } else {
+    resBlock.style.display = 'none';
+  }
+
+  // Pre-fill quick action fields
+  document.getElementById('qa_eta').value     = e.eta || '';
+  document.getElementById('qa_courier').value = e.courier_detail || '';
+
+  // Pre-fill full edit form
+  document.getElementById('e_platform').value         = e.platform || 'Whatsapp';
+  document.getElementById('e_esc_date').value         = e.escalation_date || '';
+  document.getElementById('e_customer_contact').value = e.customer_contact || '';
+  document.getElementById('e_customer_name').value    = e.customer_name || '';
+  document.getElementById('e_reported_by').value      = e.reported_by || 'Vipin';
+  document.getElementById('e_assigned').value         = e.assigned_to || 'Ajay';
+  document.getElementById('e_status').value           = e.status || 'Open';
+  document.getElementById('e_eta').value              = e.eta || '';
+  document.getElementById('e_complaint').value        = e.complaint || '';
+  document.getElementById('e_courier').value          = e.courier_detail || '';
+  document.getElementById('e_resolution').value       = e.resolution || '';
+
+  // Timeline
+  const tl = document.getElementById('timeline');
+  if(!e.updates || !e.updates.length){
+    tl.innerHTML = '<div style="color:#94a3b8;font-size:.85rem;">No updates logged yet.</div>';
+    return;
+  }
+  tl.innerHTML = [...e.updates].reverse().map(u => `
+    <div class="tl-item">
+      <div class="tl-header">
+        <span class="tl-by">${u.updated_by}</span>
+        <span class="tl-time">${u.timestamp}</span>
+        ${u.status_change ? badge(STATUS_CLASS[u.status_change]||'b-open', u.status_change) : ''}
+      </div>
+      <div class="tl-note">${u.note}</div>
+    </div>
+  `).join('');
+}
+
+function toggleEdit(){
+  const s = document.getElementById('editSection');
+  s.classList.toggle('show');
+}
+
+async function quickAction(){
+  const status  = document.getElementById('qa_status').value;
+  const eta     = document.getElementById('qa_eta').value;
+  const assign  = document.getElementById('qa_assign').value;
+  const courier = document.getElementById('qa_courier').value.trim();
+  const by      = document.getElementById('qa_by').value;
+  const remark  = document.getElementById('qa_note').value.trim();
+
+  if(!by){
+    alert('Please select your name under "Updated By".');
+    document.getElementById('qa_by').focus();
+    return;
+  }
+
+  const changes = [];
+  if(status) changes.push(`Status: ${status}`);
+  if(eta && eta !== (escData.eta || '')) changes.push(`ETA: ${eta}`);
+  if(assign) changes.push(`Assigned: ${assign}`);
+  if(courier && courier !== (escData.courier_detail || '')) changes.push(`Courier: ${courier}`);
+  if(remark) changes.push(remark);
+
+  if(!status && !assign && (!eta || eta === (escData.eta || '')) && (!courier || courier === (escData.courier_detail || '')) && !remark){
+    alert('Please select a new Status, ETA, Courier detail, or enter a remark.');
+    return;
+  }
+
+  const note = changes.join(' | ');
+
+  const payload = {
+    updated_by: by,
+    note: note
+  };
+  if(status)  payload.status = status;
+  if(eta)     payload.eta = eta;
+  if(assign)  payload.assigned_to = assign;
+  if(courier) payload.courier_detail = courier;
+
+  try{
+    const r = await fetch(`/api/escalations/${ESC_ID}/update`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if(d.success){
+      showToast('✅ Quick update saved!');
+      document.getElementById('qa_status').value = '';
+      document.getElementById('qa_assign').value = '';
+      document.getElementById('qa_note').value   = '';
+      loadEscalation();
+    } else {
+      alert(d.error || 'Failed to update.');
+    }
+  }catch(e){
+    alert('Network error while updating.');
+  }
+}
+
+async function saveEdit(){
+  const by = document.getElementById('e_updatedby').value;
+  if(!by){
+    alert('Please select your name under "Updated By".');
+    document.getElementById('e_updatedby').focus();
+    return;
+  }
+
+  const note = document.getElementById('e_note').value.trim() || 'All details updated.';
+  const body = {
+    platform        : document.getElementById('e_platform').value,
+    escalation_date : document.getElementById('e_esc_date').value,
+    customer_contact: document.getElementById('e_customer_contact').value.trim(),
+    customer_name   : document.getElementById('e_customer_name').value.trim(),
+    reported_by     : document.getElementById('e_reported_by').value,
+    assigned_to     : document.getElementById('e_assigned').value,
+    status          : document.getElementById('e_status').value,
+    eta             : document.getElementById('e_eta').value,
+    complaint       : document.getElementById('e_complaint').value.trim(),
+    courier_detail  : document.getElementById('e_courier').value.trim(),
+    resolution      : document.getElementById('e_resolution').value.trim(),
+    update_note     : note,
+    updated_by      : by
+  };
+
+  try{
+    const r = await fetch(`/api/escalations/${ESC_ID}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    if(d.success){
+      showToast('✅ Saved changes successfully!');
+      document.getElementById('editSection').classList.remove('show');
+      loadEscalation();
+    } else {
+      alert(d.error || 'Failed to save changes.');
+    }
+  }catch(e){
+    alert('Network error while saving changes.');
+  }
+}
+
+async function deleteEscalation(){
+  if(!confirm(`Are you sure you want to delete escalation ${escData ? escData.ticket_no : ''}? This cannot be undone.`)) return;
+  try{
+    const r = await fetch(`/api/escalations/${ESC_ID}`, {method: 'DELETE'});
+    const d = await r.json();
+    if(d.success){
+      showToast('🗑️ Deleted escalation', '#dc2626');
+      setTimeout(()=> window.location.href = '/dashboard', 900);
+    }
+  }catch(e){
+    alert('Failed to delete escalation.');
+  }
+}
+
+loadEscalation();
+setInterval(loadEscalation, 30000);
+</script>
+</body>
+</html>
