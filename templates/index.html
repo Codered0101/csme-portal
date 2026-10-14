@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Social Media Escalation Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Plus Jakarta Sans','Inter',sans-serif;
+      background:linear-gradient(135deg, #f0f4f8 0%, #f8fafc 50%, #e2e8f0 100%);
+      color:#1e293b;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+    }
+    .hero-container{
+      max-width:760px;
+      width:100%;
+      text-align:center;
+      background:#ffffff;
+      border:1px solid #e2e8f0;
+      border-radius:24px;
+      padding:48px 36px;
+      box-shadow:0 20px 40px -15px rgba(15, 23, 42, 0.08), 0 0 1px 1px rgba(15, 23, 42, 0.02);
+    }
+    .badge-pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      background:#eff6ff;
+      color:#2563eb;
+      border:1px solid #bfdbfe;
+      font-size:.78rem;
+      font-weight:700;
+      border-radius:9999px;
+      padding:6px 16px;
+      margin-bottom:20px;
+      letter-spacing:.5px;
+      text-transform:uppercase;
+    }
+    .dot{
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:#22c55e;
+      display:inline-block;
+      box-shadow:0 0 0 3px rgba(34,197,94,0.25);
+    }
+    h1{
+      font-size:2.4rem;
+      font-weight:800;
+      letter-spacing:-0.03em;
+      color:#0f172a;
+      line-height:1.2;
+      margin-bottom:12px;
+    }
+    h1 span{
+      background:linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+    }
+    p.subtitle{
+      color:#64748b;
+      font-size:1.05rem;
+      margin-bottom:36px;
+      line-height:1.5;
+    }
+    .action-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:20px;
+      max-width:540px;
+      margin:0 auto;
+    }
+    @media(max-width:540px){
+      .action-grid{grid-template-columns:1fr;}
+      .hero-container{padding:32px 20px;}
+      h1{font-size:1.9rem;}
+    }
+    .portal-card{
+      background:#ffffff;
+      border:1.5px solid #e2e8f0;
+      border-radius:18px;
+      padding:28px 24px;
+      text-decoration:none;
+      color:#1e293b;
+      transition:all .25s ease;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      text-align:center;
+      position:relative;
+      overflow:hidden;
+    }
+    .portal-card::before{
+      content:'';
+      position:absolute;
+      top:0;left:0;right:0;height:4px;
+      background:transparent;
+      transition:background .25s ease;
+    }
+    .portal-card.primary::before{background:linear-gradient(90deg, #2563eb, #3b82f6);}
+    .portal-card.secondary::before{background:linear-gradient(90deg, #059669, #10b981);}
+    .portal-card:hover{
+      transform:translateY(-4px);
+      box-shadow:0 14px 28px -8px rgba(37,99,235,0.15), 0 0 1px 1px rgba(37,99,235,0.1);
+      border-color:#cbd5e1;
+    }
+    .portal-card .card-icon{
+      width:56px;
+      height:56px;
+      border-radius:14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:26px;
+      margin-bottom:16px;
+      transition:transform .2s ease;
+    }
+    .portal-card.primary .card-icon{background:#eff6ff;color:#2563eb;}
+    .portal-card.secondary .card-icon{background:#ecfdf5;color:#059669;}
+    .portal-card:hover .card-icon{transform:scale(1.08);}
+    .portal-card h3{
+      font-size:1.15rem;
+      font-weight:700;
+      color:#0f172a;
+      margin-bottom:6px;
+    }
+    .portal-card p{
+      font-size:.85rem;
+      color:#64748b;
+      line-height:1.4;
+    }
+    .platforms-bar{
+      margin-top:40px;
+      padding-top:24px;
+      border-top:1px solid #f1f5f9;
+      display:flex;
+      flex-wrap:wrap;
+      justify-content:center;
+      align-items:center;
+      gap:16px;
+      font-size:.82rem;
+      font-weight:600;
+      color:#64748b;
+    }
+    .platform-pill{
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+      border-radius:20px;
+      padding:4px 12px;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      color:#334155;
+    }
+    .footer-note{
+      margin-top:28px;
+      font-size:.78rem;
+      color:#94a3b8;
+    }
+  </style>
+</head>
+<body>
+<div class="hero-container">
+  <div class="badge-pill">
+    <span class="dot"></span> Internal Escalation Portal · Live on WiFi
+  </div>
+  <h1>Customer &amp; Social Media<br/><span>Escalation Hub</span></h1>
+  <p class="subtitle">Real-time complaint tracking, courier dispatch info, and ETA management for field &amp; support teams.</p>
+  
+  <div class="action-grid">
+    <a href="/dashboard" class="portal-card primary">
+      <div class="card-icon">📊</div>
+      <h3>Live Dashboard</h3>
+      <p>View all escalations, filter by platform &amp; update resolution ETAs</p>
+    </a>
+    
+    <a href="/new" class="portal-card secondary">
+      <div class="card-icon">➕</div>
+      <h3>New Escalation</h3>
+      <p>Log a fresh customer complaint with courier &amp; ticket details</p>
+    </a>
+  </div>
+
+  <div class="platforms-bar">
+    <span style="color:#94a3b8;">Supported Channels:</span>
+    <span class="platform-pill">📘 Facebook</span>
+    <span class="platform-pill">💼 Linkedin</span>
+    <span class="platform-pill">✉️ Email</span>
+    <span class="platform-pill">💬 Whatsapp</span>
+    <span class="platform-pill">📞 Call</span>
+    <span class="platform-pill">📸 Instagram</span>
+  </div>
+
+  <div class="footer-note">
+    🔒 Restricted Internal Access · Same WiFi Network · Port 5050
+  </div>
+</div>
+</body>
+</html>
