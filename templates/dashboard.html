@@ -418,10 +418,11 @@
     <span class="icon">🚨</span>
     <span>Escalation <span class="highlight">Portal</span></span>
   </a>
-  <a href="/" class="nav-link">Home</a>
   <a href="/dashboard" class="nav-link active">Dashboard</a>
   <a href="/new" class="nav-link">+ New Escalation</a>
-  <span class="live-badge"><span class="live-dot"></span> LIVE WIFI SYNC</span>
+  <button class="btn btn-outline" style="padding:6px 14px;font-size:.82rem;font-weight:600;display:inline-flex;align-items:center;gap:6px;cursor:pointer;" onclick="openImportModal()">📥 Import Excel</button>
+  <a href="/api/export-excel" class="btn btn-outline" style="padding:6px 14px;font-size:.82rem;font-weight:600;display:inline-flex;align-items:center;gap:6px;text-decoration:none;">📤 Export Excel</a>
+  <span class="live-badge"><span class="live-dot"></span> LIVE CLOUD SYNC</span>
 </nav>
 
 <div class="container">
@@ -494,6 +495,51 @@
           <tr><td colspan="12" class="empty-state"><div class="empty-icon">⏳</div><p>Loading escalations...</p></td></tr>
         </tbody>
       </table>
+    </div>
+    <!-- PAGINATION BAR -->
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-top:1px solid #f1f5f9;background:#fcfdfe;flex-wrap:wrap;gap:12px;">
+      <div style="font-size:.84rem;color:#64748b;" id="pageInfo">Showing 0–0 of 0 records</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <label style="font-size:.82rem;color:#64748b;">Per page:</label>
+        <select id="pageSizeSelect" class="filter-select" style="padding:4px 8px;font-size:.82rem;" onchange="changePageSize(this.value)">
+          <option value="25" selected>25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+          <option value="All">All</option>
+        </select>
+        <button class="btn btn-outline" style="padding:5px 12px;font-size:.82rem;" id="btnPrev" onclick="prevPage()" disabled>&larr; Prev</button>
+        <span id="pageNumbers" style="font-size:.84rem;font-weight:700;color:#1e293b;padding:0 6px;">Page 1 of 1</span>
+        <button class="btn btn-outline" style="padding:5px 12px;font-size:.82rem;" id="btnNext" onclick="nextPage()">&rarr; Next</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT EXCEL MODAL -->
+<div id="importModal" class="modal-overlay">
+  <div class="modal-box" style="max-width:520px;">
+    <div class="modal-header">
+      <h3 class="modal-title">📥 Import Escalations from Excel</h3>
+      <button class="btn-close-modal" onclick="closeImportModal()">&times;</button>
+    </div>
+    <p style="font-size:.86rem;color:#64748b;margin-bottom:16px;line-height:1.5;">
+      Upload your <strong>Escalations_Report.xlsx</strong>. The portal will automatically detect the columns, insert all complaints, and update any existing tickets.
+    </p>
+
+    <div style="border:2px dashed #cbd5e1;border-radius:14px;padding:26px 16px;text-align:center;background:#f8fafc;margin-bottom:16px;">
+      <input type="file" id="excelFileInput" accept=".xlsx,.xlsm" style="display:none;" onchange="handleFileSelected(this)"/>
+      <div style="font-size:2.4rem;margin-bottom:8px;">📊</div>
+      <div id="selectedFileName" style="font-size:.88rem;font-weight:600;color:#1e293b;margin-bottom:8px;">Select or drop your Excel file here</div>
+      <button type="button" class="btn btn-outline" style="font-size:.82rem;" onclick="document.getElementById('excelFileInput').click()">📁 Choose Excel File (.xlsx)</button>
+    </div>
+
+    <div id="importProgress" style="display:none;margin-bottom:14px;font-size:.88rem;color:#2563eb;font-weight:600;text-align:center;">
+      ⏳ Uploading and syncing records...
+    </div>
+
+    <div style="display:flex;gap:12px;justify-content:flex-end;">
+      <button class="btn btn-outline" onclick="closeImportModal()">Cancel</button>
+      <button class="btn btn-primary" id="btnDoImport" onclick="submitImportExcel()" disabled>🚀 Upload &amp; Sync Complaints</button>
     </div>
   </div>
 </div>
@@ -588,6 +634,10 @@ function statusBadge(s){
   return `<span class="badge ${map[s] || 'b-open'}">${s || 'Open'}</span>`;
 }
 
+let allEscalations = [];
+let currentPage = 1;
+let pageSize = 25;
+
 async function loadStats(){
   try{
     const r = await fetch('/api/stats');
@@ -603,70 +653,146 @@ async function loadStats(){
   }
 }
 
-async function loadTable(){
-  const search   = document.getElementById('searchBox').value.trim();
-  const status   = document.getElementById('fStatus').value;
-  const platform = document.getElementById('fPlatform').value;
-
-  const params = new URLSearchParams();
-  if(search)   params.set('search', search);
-  if(status)   params.set('status', status);
-  if(platform) params.set('platform', platform);
-
+async function loadTableData(){
   try{
-    const r = await fetch('/api/escalations?' + params.toString());
-    const data = await r.json();
-    const tbody = document.getElementById('escTable');
-
-    if(!data.length){
-      tbody.innerHTML = `<tr><td colspan="12" class="empty-state"><div class="empty-icon">📭</div><p>No escalations found matching filters.</p></td></tr>`;
-      return;
-    }
-
-    const today = new Date().toISOString().split('T')[0];
-
-    tbody.innerHTML = data.map(e => {
-      let etaHtml = '—';
-      if(e.eta){
-        const isOverdue = e.eta < today && e.status !== 'Resolved' && e.status !== 'Closed';
-        etaHtml = isOverdue 
-          ? `<span style="color:#ef4444;font-weight:700;">${e.eta} <span title="Overdue ETA">⚠️</span></span>`
-          : `<span style="color:#059669;font-weight:600;">${e.eta}</span>`;
-      }
-
-      const safeTicket  = (e.ticket_no || '').replace(/'/g, "\\'");
-      const safeCourier = (e.courier_detail || '').replace(/'/g, "\\'");
-      const safeStatus  = (e.status || 'Open').replace(/'/g, "\\'");
-      const safeEta     = (e.eta || '').replace(/'/g, "\\'");
-      const safeAssign  = (e.assigned_to || '').replace(/'/g, "\\'");
-
-      return `
-      <tr>
-        <td><a class="ticket-badge" href="/detail/${e.id}">${e.ticket_no}</a></td>
-        <td><span class="platform-pill">${PLATFORM_ICONS[e.platform]||'💬'} ${e.platform}</span></td>
-        <td style="font-weight:600;">${e.customer_name || '—'}</td>
-        <td style="font-size:.82rem;color:#475569;">${e.customer_contact || '—'}</td>
-        <td class="cell-complaint" title="${(e.complaint||'').replace(/"/g,'&quot;')}">${e.complaint || '—'}</td>
-        <td class="cell-courier" title="${(e.courier_detail||'').replace(/"/g,'&quot;')}">${e.courier_detail || '—'}</td>
-        <td style="font-weight:600;font-size:.82rem;">${e.reported_by || '—'}</td>
-        <td style="font-weight:600;font-size:.82rem;color:#2563eb;">${e.assigned_to || '—'}</td>
-        <td style="font-size:.8rem;color:#64748b;">${e.escalation_date || '—'}</td>
-        <td>${statusBadge(e.status)}</td>
-        <td style="font-size:.82rem;">${etaHtml}</td>
-        <td>
-          <button class="btn-update-action" onclick="openQuickModal(${e.id}, '${safeTicket}', '${safeStatus}', '${safeEta}', '${safeAssign}', '${safeCourier}')">
-            ⚡ Update
-          </button>
-        </td>
-      </tr>`;
-    }).join('');
-
+    const r = await fetch('/api/escalations');
+    allEscalations = await r.json();
     document.getElementById('lastRefresh').textContent = new Date().toLocaleTimeString();
+    renderPage();
   }catch(e){
     console.error('Table load error', e);
+    document.getElementById('escTable').innerHTML = `<tr><td colspan="12" class="empty-state"><div class="empty-icon">⚠️</div><p>Failed to load escalations. Please refresh.</p></td></tr>`;
   }
 }
 
+function getFilteredData(){
+  const search   = document.getElementById('searchBox').value.trim().toLowerCase();
+  const status   = document.getElementById('fStatus').value;
+  const platform = document.getElementById('fPlatform').value;
+
+  return allEscalations.filter(e => {
+    if(status && e.status !== status) return false;
+    if(platform && e.platform !== platform) return false;
+    if(search){
+      const haystack = [
+        e.ticket_no,
+        e.customer_name,
+        e.customer_contact,
+        e.complaint,
+        e.courier_detail,
+        e.assigned_to,
+        e.reported_by,
+        e.platform,
+        e.status,
+        e.priority
+      ].filter(Boolean).join(' ').toLowerCase();
+      if(!haystack.includes(search)) return false;
+    }
+    return true;
+  });
+}
+
+function renderPage(){
+  const filtered = getFilteredData();
+  const tbody = document.getElementById('escTable');
+  const total = filtered.length;
+
+  if(!total){
+    tbody.innerHTML = `<tr><td colspan="12" class="empty-state"><div class="empty-icon">📭</div><p>No escalations found matching filters.</p></td></tr>`;
+    document.getElementById('pageInfo').textContent = 'Showing 0 of 0 records';
+    document.getElementById('pageNumbers').textContent = 'Page 1 of 1';
+    document.getElementById('btnPrev').disabled = true;
+    document.getElementById('btnNext').disabled = true;
+    return;
+  }
+
+  const effectivePageSize = pageSize === 'All' ? total : parseInt(pageSize, 10);
+  const totalPages = Math.ceil(total / effectivePageSize) || 1;
+  if(currentPage > totalPages) currentPage = totalPages;
+  if(currentPage < 1) currentPage = 1;
+
+  const startIdx = (currentPage - 1) * effectivePageSize;
+  const endIdx   = Math.min(startIdx + effectivePageSize, total);
+  const pageItems = filtered.slice(startIdx, endIdx);
+
+  const today = new Date().toISOString().split('T')[0];
+
+  tbody.innerHTML = pageItems.map(e => {
+    let etaHtml = '—';
+    if(e.eta){
+      const isOverdue = e.eta < today && e.status !== 'Resolved' && e.status !== 'Closed';
+      etaHtml = isOverdue 
+        ? `<span style="color:#ef4444;font-weight:700;">${e.eta} <span title="Overdue ETA">⚠️</span></span>`
+        : `<span style="color:#059669;font-weight:600;">${e.eta}</span>`;
+    }
+
+    const safeTicket  = (e.ticket_no || '').replace(/'/g, "\\'");
+    const safeCourier = (e.courier_detail || '').replace(/'/g, "\\'");
+    const safeStatus  = (e.status || 'Open').replace(/'/g, "\\'");
+    const safeEta     = (e.eta || '').replace(/'/g, "\\'");
+    const safeAssign  = (e.assigned_to || '').replace(/'/g, "\\'");
+
+    let priorityBadge = '';
+    if(e.priority === 'Critical') priorityBadge = '<span style="color:#ef4444;font-weight:700;font-size:.74rem;display:block;">🔥 Critical</span>';
+    else if(e.priority === 'High') priorityBadge = '<span style="color:#f59e0b;font-weight:600;font-size:.74rem;display:block;">⚡ High</span>';
+
+    return `
+    <tr>
+      <td>
+        <a class="ticket-badge" href="/detail/${e.id}">${e.ticket_no}</a>
+        ${priorityBadge}
+      </td>
+      <td><span class="platform-pill">${PLATFORM_ICONS[e.platform]||'💬'} ${e.platform}</span></td>
+      <td style="font-weight:600;">${e.customer_name || '—'}</td>
+      <td style="font-size:.82rem;color:#475569;">${e.customer_contact || '—'}</td>
+      <td class="cell-complaint" title="${(e.complaint||'').replace(/"/g,'&quot;')}">${e.complaint || '—'}</td>
+      <td class="cell-courier" title="${(e.courier_detail||'').replace(/"/g,'&quot;')}">${e.courier_detail || '—'}</td>
+      <td style="font-weight:600;font-size:.82rem;">${e.reported_by || '—'}</td>
+      <td style="font-weight:600;font-size:.82rem;color:#2563eb;">${e.assigned_to || '—'}</td>
+      <td style="font-size:.8rem;color:#64748b;">${e.escalation_date || '—'}</td>
+      <td>${statusBadge(e.status)}</td>
+      <td style="font-size:.82rem;">${etaHtml}</td>
+      <td>
+        <button class="btn-update-action" onclick="openQuickModal(${e.id}, '${safeTicket}', '${safeStatus}', '${safeEta}', '${safeAssign}', '${safeCourier}')">
+          ⚡ Update
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('pageInfo').textContent = `Showing ${startIdx + 1}–${endIdx} of ${total} records`;
+  document.getElementById('pageNumbers').textContent = `Page ${currentPage} of ${totalPages}`;
+  document.getElementById('btnPrev').disabled = (currentPage <= 1);
+  document.getElementById('btnNext').disabled = (currentPage >= totalPages);
+}
+
+function prevPage(){
+  if(currentPage > 1){
+    currentPage--;
+    renderPage();
+  }
+}
+
+function nextPage(){
+  currentPage++;
+  renderPage();
+}
+
+function changePageSize(val){
+  pageSize = val;
+  currentPage = 1;
+  renderPage();
+}
+
+// Filter listeners
+['searchBox','fStatus','fPlatform'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', ()=>{
+    currentPage = 1;
+    renderPage();
+  });
+});
+
+// Quick Update Modal
 let activeModalId = null;
 
 function openQuickModal(id, ticketNo, status, eta, assign, courier){
@@ -729,19 +855,83 @@ async function submitQuickModal(){
   }
 }
 
-async function refresh(){
-  await Promise.all([loadStats(), loadTable()]);
+// Import Excel Modal
+function openImportModal(){
+  document.getElementById('importModal').style.display = 'flex';
+  document.getElementById('excelFileInput').value = '';
+  document.getElementById('selectedFileName').textContent = 'Select or drop your Excel file here';
+  document.getElementById('btnDoImport').disabled = true;
+  document.getElementById('importProgress').style.display = 'none';
 }
 
-['searchBox','fStatus','fPlatform'].forEach(id=>{
-  document.getElementById(id).addEventListener('input', loadTable);
-});
+function closeImportModal(){
+  document.getElementById('importModal').style.display = 'none';
+}
 
-// Close modal on Escape key or outside click
-window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeQuickModal(); });
+function handleFileSelected(input){
+  if(input.files && input.files[0]){
+    const file = input.files[0];
+    document.getElementById('selectedFileName').textContent = `📄 ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+    document.getElementById('btnDoImport').disabled = false;
+  }
+}
+
+async function submitImportExcel(){
+  const fileInput = document.getElementById('excelFileInput');
+  if(!fileInput.files || !fileInput.files[0]){
+    alert('Please choose an Excel file to import.');
+    return;
+  }
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+
+  document.getElementById('importProgress').style.display = 'block';
+  document.getElementById('btnDoImport').disabled = true;
+
+  try{
+    const res = await fetch('/api/import-excel', {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    document.getElementById('importProgress').style.display = 'none';
+
+    if(data.success){
+      alert(`🎉 Import Successful!\n\n• New complaints imported: ${data.imported}\n• Existing complaints updated: ${data.updated}\n• Total active records: ${data.total}`);
+      closeImportModal();
+      refresh();
+    } else {
+      alert(`❌ Import Failed: ${data.error || 'Unknown error'}`);
+      document.getElementById('btnDoImport').disabled = false;
+    }
+  }catch(err){
+    document.getElementById('importProgress').style.display = 'none';
+    document.getElementById('btnDoImport').disabled = false;
+    alert(`❌ Network or server error during upload: ${err.message}`);
+  }
+}
+
+async function refresh(){
+  await Promise.all([loadStats(), loadTableData()]);
+}
+
+// Close modals on Escape key or outside click
+window.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape'){
+    closeQuickModal();
+    closeImportModal();
+  }
+});
 document.getElementById('quickModal').addEventListener('click', (e)=>{
   if(e.target === document.getElementById('quickModal')) closeQuickModal();
 });
+document.getElementById('importModal').addEventListener('click', (e)=>{
+  if(e.target === document.getElementById('importModal')) closeImportModal();
+});
+
+refresh();
+setInterval(refresh, 30000);
+</script>
 
 refresh();
 setInterval(refresh, 30000);
