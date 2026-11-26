@@ -351,6 +351,7 @@ def get_stats():
     pending  = Escalation.query.filter_by(status='Pending').count()
     resolved = Escalation.query.filter_by(status='Resolved').count()
     closed   = Escalation.query.filter_by(status='Closed').count()
+    cancelled = Escalation.query.filter_by(status='Cancelled').count()
     critical = Escalation.query.filter_by(priority='Critical').count()
     high     = Escalation.query.filter_by(priority='High').count()
 
@@ -365,6 +366,7 @@ def get_stats():
         'pending': pending,
         'resolved': resolved,
         'closed': closed,
+        'cancelled': cancelled,
         'critical': critical,
         'high': high,
         'by_platform': [{'platform': p, 'count': c} for p, c in by_platform]
