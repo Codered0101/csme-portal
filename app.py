@@ -7,11 +7,14 @@ import io
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from datetime import datetime
 import os
+import json
+import re
+
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -119,55 +122,37 @@ def init_db():
         except Exception as e:
             print(f"Migration notice: {e}")
 
-        # Seed sample escalations if empty so dashboard is active immediately
+        # Seed real escalations if empty or <= 3 dummy items
         try:
-            if Escalation.query.count() == 0:
-                sample_items = [
-                    Escalation(
-                        ticket_no="ESC-2024-001",
-                        customer_contact="+91 98765 43210",
-                        customer_name="Rahul Sharma",
-                        platform="Whatsapp",
-                        escalation_date=datetime.utcnow().strftime('%Y-%m-%d'),
-                        reported_by="Vipin",
-                        assigned_to="Ajay",
-                        complaint="Smart TV display panel flickering intermittently. Customer requesting urgent technician visit.",
-                        courier_detail="Bluedart AWB #BLU-882910 - Replacement board in transit",
-                        priority="High",
-                        status="In Progress",
-                        eta=datetime.utcnow().strftime('%Y-%m-%d')
-                    ),
-                    Escalation(
-                        ticket_no="ESC-2024-002",
-                        customer_contact="+91 91234 56789",
-                        customer_name="Pooja Verma",
-                        platform="Instagram",
-                        escalation_date=datetime.utcnow().strftime('%Y-%m-%d'),
-                        reported_by="Chandani",
-                        assigned_to="Anupam",
-                        complaint="Sound bar power cable missing in delivery parcel. Customer escalation on social handle.",
-                        courier_detail="Delhivery Tracking #DL-993821 - Dispatched adapter",
-                        priority="Medium",
-                        status="Open",
-                        eta=datetime.utcnow().strftime('%Y-%m-%d')
-                    ),
-                    Escalation(
-                        ticket_no="ESC-2024-003",
-                        customer_contact="+91 99887 76655",
-                        customer_name="Vikram Mehta",
-                        platform="Facebook",
-                        escalation_date=datetime.utcnow().strftime('%Y-%m-%d'),
-                        reported_by="Vipin",
-                        assigned_to="Monika",
-                        complaint="Delayed installation service post-delivery. Customer requested morning time slot.",
-                        courier_detail="Product delivered on 12-Oct by DTDC",
-                        priority="Critical",
-                        status="Pending",
-                        eta=datetime.utcnow().strftime('%Y-%m-%d')
-                    )
-                ]
-                db.session.add_all(sample_items)
+            current_count = Escalation.query.count()
+            json_file = os.path.join(BASE_DIR, "initial_escalations.json")
+            if current_count <= 3 and os.path.exists(json_file):
+                EscalationUpdate.query.delete()
+                Escalation.query.delete()
                 db.session.commit()
+                with open(json_file, 'r', encoding='utf-8') as f:
+                    items = json.load(f)
+                to_add = []
+                for item in items:
+                    esc = Escalation(
+                        ticket_no=item['ticket_no'],
+                        customer_contact=item.get('customer_contact', ''),
+                        customer_name=item.get('customer_name', ''),
+                        platform=item.get('platform', 'Email'),
+                        escalation_date=item.get('escalation_date', ''),
+                        reported_by=item.get('reported_by', ''),
+                        assigned_to=item.get('assigned_to', ''),
+                        complaint=item.get('complaint', ''),
+                        courier_detail=item.get('courier_detail', ''),
+                        priority=item.get('priority', 'Medium'),
+                        status=item.get('status', 'Open'),
+                        resolution=item.get('resolution', ''),
+                        eta=item.get('eta', '')
+                    )
+                    to_add.append(esc)
+                db.session.add_all(to_add)
+                db.session.commit()
+                print(f"[OK] Seeded {len(to_add)} real complaints from initial_escalations.json")
         except Exception as e:
             print(f"Seed notice: {e}")
 
@@ -384,6 +369,255 @@ def get_stats():
         'high': high,
         'by_platform': [{'platform': p, 'count': c} for p, c in by_platform]
     })
+
+
+# ─────────────────────────── EXCEL IMPORT & EXPORT ───────────────────────────
+
+@app.route('/api/import-excel', methods=['POST'])
+def import_excel():
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'error': 'No file uploaded'}), 400
+    file = request.files['file']
+    if not file.filename.lower().endswith(('.xlsx', '.xlsm', '.xltx')):
+        return jsonify({'success': False, 'error': 'Invalid format. Please upload an Excel (.xlsx) file.'}), 400
+
+    try:
+        import openpyxl
+        wb = openpyxl.load_workbook(file.stream, data_only=True)
+        sheet = None
+        if 'Coocaa Escalations Oveall' in wb.sheetnames:
+            sheet = wb['Coocaa Escalations Oveall']
+        elif 'Raw Data' in wb.sheetnames:
+            sheet = wb['Raw Data']
+        else:
+            sheet = wb.active
+
+        headers = [str(c.value).strip() if c.value is not None else '' for c in sheet[1]]
+
+        def find_col(possible_names):
+            for name in possible_names:
+                for idx, h in enumerate(headers):
+                    if name.lower() in h.lower():
+                        return idx + 1
+            return None
+
+        cno_col = find_col(['complaint number', 'ticket', 'ticket_no', 's.no'])
+        name_col = find_col(['customer name', 'name', 'customer'])
+        phone_col = find_col(['customer phone', 'phone', 'contact', 'mobile'])
+        email_col = find_col(['customer email', 'email'])
+        date_col = find_col(['email date', 'date', 'escalation date', 'created'])
+        subject_col = find_col(['email subject', 'subject', 'complaint', 'issue details'])
+        reason_col = find_col(['escalation reason', 'reason', 'issue'])
+        model_col = find_col(['tv model', 'model'])
+        state_col = find_col(['state / region', 'state', 'region', 'city'])
+        status_col = find_col(['current service status', 'complaint status', 'status'])
+        assign_col = find_col(['assigned member', 'assigned to', 'assign to', 'assignee'])
+        mailbox_col = find_col(['outlook mailbox', 'reported by', 'mailbox'])
+        order_col = find_col(['order id', 'invoice', 'order id / invoice', 'courier'])
+
+        imported_count = 0
+        updated_count = 0
+        existing_map = {e.ticket_no: e for e in Escalation.query.all()}
+        seen_tickets = set(existing_map.keys())
+
+        for r in range(2, sheet.max_row + 1):
+            raw_cno = sheet.cell(row=r, column=cno_col).value if cno_col else None
+            if raw_cno is None and not any(sheet.cell(row=r, column=c).value for c in range(1, len(headers)+1)):
+                continue
+
+            raw_cno_str = str(raw_cno).strip() if raw_cno and str(raw_cno).strip() not in ['None', 'N/A', '-'] else f'IMP-{r:04d}'
+            base_t = raw_cno_str
+            sfx = 1
+            while raw_cno_str in seen_tickets and raw_cno_str not in existing_map:
+                raw_cno_str = f"{base_t}-{sfx}"
+                sfx += 1
+            seen_tickets.add(raw_cno_str)
+
+            cname = str(sheet.cell(row=r, column=name_col).value or '').strip() if name_col else ''
+            phone = str(sheet.cell(row=r, column=phone_col).value or '').strip() if phone_col else ''
+            if phone.endswith('.0'): phone = phone[:-2]
+            email = str(sheet.cell(row=r, column=email_col).value or '').strip() if email_col else ''
+
+            contacts = [p for p in [phone, email] if p and p not in ['None', 'N/A', '-']]
+            contact_str = ' | '.join(contacts)
+
+            raw_date = sheet.cell(row=r, column=date_col).value if date_col else None
+            date_str = ''
+            if raw_date:
+                if isinstance(raw_date, datetime):
+                    date_str = raw_date.strftime('%Y-%m-%d')
+                else:
+                    date_str = str(raw_date)[:10].strip()
+
+            raw_st = str(sheet.cell(row=r, column=status_col).value or '').strip() if status_col else 'Open'
+            status = 'Open'
+            st_lower = raw_st.lower()
+            if 'closed' in st_lower or 'cancel' in st_lower or 'replacement processed' in st_lower:
+                status = 'Closed'
+            elif 'transit' in st_lower or 'awaited' in st_lower or 'pending' in st_lower:
+                status = 'Pending'
+            elif 'visit' in st_lower or 'progress' in st_lower:
+                status = 'In Progress'
+
+            assign_str = str(sheet.cell(row=r, column=assign_col).value or '').strip() if assign_col else 'Unassigned'
+            if assign_str in ['None', 'N/A', '-']: assign_str = 'Unassigned'
+
+            courier_val = str(sheet.cell(row=r, column=order_col).value or '').strip() if order_col else ''
+            if courier_val in ['None', 'N/A', '-']: courier_val = ''
+            if raw_st and raw_st not in ['None', 'N/A', '-']:
+                courier_val = f"{courier_val} | Status: {raw_st}" if courier_val else f"Status: {raw_st}"
+
+            subj = str(sheet.cell(row=r, column=subject_col).value or '').strip() if subject_col else ''
+            reas = str(sheet.cell(row=r, column=reason_col).value or '').strip() if reason_col else ''
+            mod = str(sheet.cell(row=r, column=model_col).value or '').strip() if model_col else ''
+            stt = str(sheet.cell(row=r, column=state_col).value or '').strip() if state_col else ''
+            parts = [p for p in [subj, f"Reason: {reas}" if reas and reas != subj else "", f"Model: {mod}" if mod else "", f"State: {stt}" if stt else ""] if p and p not in ['None', 'N/A', '-']]
+            complaint_text = '\n'.join(parts) if parts else 'Customer escalation.'
+
+            comb = f"{subj} {reas}".lower()
+            if 'legal' in comb or 'forum' in comb or 'court' in comb: priority = 'Critical'
+            elif 'delay' in comb or 'urgent' in comb: priority = 'High'
+            else: priority = 'Medium'
+
+            mb = str(sheet.cell(row=r, column=mailbox_col).value or '').strip() if mailbox_col else 'Email Support'
+            if mb in ['None', 'N/A', '-']: mb = 'Email Support'
+
+            if raw_cno_str in existing_map:
+                existing = existing_map[raw_cno_str]
+                if cname and cname not in ['None', 'N/A', '-']: existing.customer_name = cname
+                if contact_str: existing.customer_contact = contact_str
+                if date_str: existing.escalation_date = date_str
+                if complaint_text: existing.complaint = complaint_text
+                if courier_val: existing.courier_detail = courier_val
+                if assign_str: existing.assigned_to = assign_str
+                existing.status = status
+                existing.priority = priority
+                existing.updated_at = datetime.utcnow()
+                updated_count += 1
+            else:
+                new_esc = Escalation(
+                    ticket_no=raw_cno_str,
+                    customer_name=cname if cname and cname not in ['None', 'N/A', '-'] else 'Customer',
+                    customer_contact=contact_str,
+                    platform='Email',
+                    escalation_date=date_str or datetime.utcnow().strftime('%Y-%m-%d'),
+                    reported_by=mb,
+                    assigned_to=assign_str,
+                    complaint=complaint_text,
+                    courier_detail=courier_val,
+                    priority=priority,
+                    status=status
+                )
+                db.session.add(new_esc)
+                existing_map[raw_cno_str] = new_esc
+                imported_count += 1
+
+        db.session.commit()
+        return jsonify({'success': True, 'imported': imported_count, 'updated': updated_count, 'total': len(existing_map)})
+    except Exception as ex:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(ex)}), 500
+
+
+@app.route('/api/export-excel', methods=['GET'])
+def export_excel():
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Escalations"
+
+        headers = [
+            "Ticket #", "Platform", "Customer Name", "Customer Contact",
+            "Complaint Detail", "Courier Detail", "Reported By", "Assign To",
+            "Escalation Date", "Priority", "Status", "Resolution ETA", "Resolution Remarks"
+        ]
+        ws.append(headers)
+
+        header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="1E3A8A", end_color="1E3A8A", fill_type="solid")
+        for cell in ws[1]:
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        items = Escalation.query.order_by(Escalation.id.desc()).all()
+        for e in items:
+            ws.append([
+                e.ticket_no,
+                e.platform,
+                e.customer_name,
+                e.customer_contact,
+                e.complaint,
+                e.courier_detail,
+                e.reported_by,
+                e.assigned_to,
+                e.escalation_date,
+                e.priority,
+                e.status,
+                e.eta,
+                e.resolution
+            ])
+
+        for col in ws.columns:
+            max_len = max(len(str(cell.value or '')) for cell in col)
+            col_letter = openpyxl.utils.get_column_letter(col[0].column)
+            ws.column_dimensions[col_letter].width = min(max(max_len + 3, 12), 50)
+
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        return send_file(
+            buf,
+            as_attachment=True,
+            download_name=f"Escalations_Report_{datetime.utcnow().strftime('%Y%m%d')}.xlsx",
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    except Exception as ex:
+        return jsonify({'success': False, 'error': str(ex)}), 500
+
+
+@app.route('/api/bulk-escalations', methods=['POST'])
+def bulk_escalations():
+    data = request.json or []
+    if not isinstance(data, list):
+        return jsonify({'success': False, 'error': 'Expected JSON array'}), 400
+
+    existing = {e.ticket_no: e for e in Escalation.query.all()}
+    added = 0
+    updated = 0
+    for item in data:
+        tno = item.get('ticket_no', '').strip()
+        if not tno: continue
+        if tno in existing:
+            e = existing[tno]
+            for k in ['customer_name', 'customer_contact', 'platform', 'escalation_date', 'reported_by', 'assigned_to', 'complaint', 'courier_detail', 'priority', 'status', 'resolution', 'eta']:
+                if k in item: setattr(e, k, item[k])
+            e.updated_at = datetime.utcnow()
+            updated += 1
+        else:
+            new_e = Escalation(
+                ticket_no=tno,
+                customer_name=item.get('customer_name', ''),
+                customer_contact=item.get('customer_contact', ''),
+                platform=item.get('platform', 'Email'),
+                escalation_date=item.get('escalation_date', ''),
+                reported_by=item.get('reported_by', ''),
+                assigned_to=item.get('assigned_to', ''),
+                complaint=item.get('complaint', ''),
+                courier_detail=item.get('courier_detail', ''),
+                priority=item.get('priority', 'Medium'),
+                status=item.get('status', 'Open'),
+                resolution=item.get('resolution', ''),
+                eta=item.get('eta', '')
+            )
+            db.session.add(new_e)
+            existing[tno] = new_e
+            added += 1
+    db.session.commit()
+    return jsonify({'success': True, 'added': added, 'updated': updated, 'total': len(existing)})
+
 
 
 # ─────────────────────────── MAIN ───────────────────────────
