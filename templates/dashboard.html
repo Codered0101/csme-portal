@@ -314,7 +314,8 @@
     .b-inprog{background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe;}
     .b-pending{background:#ede9fe;color:#6d28d9;border:1px solid #ddd6fe;}
     .b-resolved{background:#d1fae5;color:#047857;border:1px solid #a7f3d0;}
-    .b-closed{background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;}
+    .b-closed{background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;}
+    .b-cancelled{background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1;}
 
     .platform-pill{
       display:inline-flex;
@@ -427,13 +428,12 @@
 
 <div class="container">
   <!-- STATS -->
-  <div class="stats-grid">
+  <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
     <div class="stat-card c-total"><div class="lbl">Total Complaints</div><div class="num" id="sTotal">–</div></div>
-    <div class="stat-card c-open"><div class="lbl">Open</div><div class="num" id="sOpen">–</div></div>
-    <div class="stat-card c-inprog"><div class="lbl">In Progress</div><div class="num" id="sInprog">–</div></div>
-    <div class="stat-card c-pend"><div class="lbl">Pending</div><div class="num" id="sPend">–</div></div>
-    <div class="stat-card c-res"><div class="lbl">Resolved</div><div class="num" id="sRes">–</div></div>
     <div class="stat-card c-closed"><div class="lbl">Closed</div><div class="num" id="sClosed">–</div></div>
+    <div class="stat-card c-pend"><div class="lbl">Pending</div><div class="num" id="sPend">–</div></div>
+    <div class="stat-card" style="border-left:4px solid #64748b;"><div class="lbl">Cancelled</div><div class="num" id="sCancelled" style="color:#64748b;">–</div></div>
+    <div class="stat-card c-open"><div class="lbl">Open / Review</div><div class="num" id="sOpen">–</div></div>
   </div>
 
   <!-- FILTERS & SEARCH -->
@@ -445,11 +445,11 @@
 
     <select id="fStatus" class="filter-select">
       <option value="">All Statuses</option>
+      <option value="Closed">Closed</option>
+      <option value="Pending">Pending</option>
+      <option value="Cancelled">Cancelled</option>
       <option value="Open">Open</option>
       <option value="In Progress">In Progress</option>
-      <option value="Pending">Pending</option>
-      <option value="Resolved">Resolved</option>
-      <option value="Closed">Closed</option>
     </select>
 
     <select id="fPlatform" class="filter-select">
@@ -629,7 +629,8 @@ function statusBadge(s){
     'In Progress':'b-inprog',
     'Pending':'b-pending',
     'Resolved':'b-resolved',
-    'Closed':'b-closed'
+    'Closed':'b-closed',
+    'Cancelled':'b-cancelled'
   };
   return `<span class="badge ${map[s] || 'b-open'}">${s || 'Open'}</span>`;
 }
@@ -643,11 +644,10 @@ async function loadStats(){
     const r = await fetch('/api/stats');
     const d = await r.json();
     document.getElementById('sTotal').textContent  = d.total || 0;
-    document.getElementById('sOpen').textContent   = d.open || 0;
-    document.getElementById('sInprog').textContent = d.in_progress || 0;
-    document.getElementById('sPend').textContent   = d.pending || 0;
-    document.getElementById('sRes').textContent    = d.resolved || 0;
     document.getElementById('sClosed').textContent = d.closed || 0;
+    document.getElementById('sPend').textContent   = d.pending || 0;
+    if(document.getElementById('sCancelled')) document.getElementById('sCancelled').textContent = d.cancelled || 0;
+    document.getElementById('sOpen').textContent   = d.open || 0;
   }catch(e){
     console.error('Stats load error', e);
   }
